@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f3efe4">
+<title>止 M3Dao Lock Garden 0.90M — reverse cascade prototype</title>
+<style>
+/* Constitution Article III: Visual Restraint. Palette relies on paper, ink, and restrained gold. [cite: 88] */
+:root {
+  --bg:#f3efe4; --panel:#fffaf0; --ink:#28241c; --soft:#786f60; --line:#cfc4ad;
+  --gold:#b8974d; --empty:#eee5d2; --shadow:#6f654626; --focus:#2b2419;
+}
+* { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; background:var(--bg); }
+body {
+  margin:0; min-height:100vh; min-height:100dvh; overflow-x:hidden; overscroll-behavior:none;
+  padding:calc(10px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));
+  display:grid; place-items:start center; color:var(--ink);
+  background:radial-gradient(circle at top,#fffaf0,#e9dfc9 74%);
+  font-family:Georgia,"Times New Roman","Noto Serif SC","Songti SC",serif;
+  -webkit-tap-highlight-color:transparent;
+}
+#app { width:min(100%,1060px); padding:14px; background:rgba(255,250,240,.86); border:1px solid var(--line); border-radius:24px; box-shadow:0 18px 45px var(--shadow); }
+h1,h2,h3 { margin:0; font-weight:500; letter-spacing:.025em; }
+h1 { text-align:center; font-size:clamp(28px,8vw,48px); }
+h2 { font-size:clamp(21px,5vw,32px); }
+h3 { font-size:18px; }
+p,.soft { color:var(--soft); line-height:1.52; }
+p { margin:8px auto 12px; max-width:780px; text-align:center; }
+button,.chip {
+  border:1px solid var(--line); border-radius:999px; background:#fff8e8; color:var(--ink);
+  padding:10px 14px; font:16px Georgia,"Times New Roman","Noto Serif SC",serif; cursor:pointer;
+  box-shadow:0 4px 12px #6f65461a;
+}
+button:active { transform:translateY(1px); }
+button:focus-visible,input:focus-visible { outline:3px solid #b8974d55; outline-offset:2px; }
+.toolbar { display:flex; flex-wrap:wrap; gap:9px; align-items:center; justify-content:center; margin:12px 0; }
+label.check { display:inline-flex; align-items:center; gap:7px; color:var(--soft); user-select:none; }
+.view { display:none; } .view.active { display:block; }
+.level-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-top:12px; }
+.level-card { text-align:left; border-radius:16px; padding:13px; background:#fffaf0; border:1px solid var(--line); box-shadow:0 4px 18px #6f654612; }
+.level-card[aria-current="true"] { border-color:var(--gold); background:#fff2cf; }
+.level-card .meta { font-size:13px; color:var(--soft); line-height:1.4; margin-top:6px; }
+.play-grid { display:grid; grid-template-columns:minmax(286px,620px) minmax(260px,1fr); gap:14px; align-items:start; }
+@media (max-width:860px) { #app { padding:12px; border-radius:18px; } .play-grid { grid-template-columns:1fr; } }
+/* Ensure touch interactions remain completely dedicated to the canvas, preventing mobile page scroll conflicts */
+canvas {
+  width:min(94vw,620px); height:min(94vw,620px); aspect-ratio:1/1; display:block; margin:auto;
+  background:var(--panel); border:1px solid var(--line); border-radius:20px; box-shadow:0 18px 45px var(--shadow);
+  touch-action:none; -webkit-user-select:none; user-select:none;
+}
+#status { min-height:34px; text-align:center; font-size:17px; margin:10px 0; color:var(--ink); }
+.side { display:grid; gap:12px; }
+.statbox { border:1px solid var(--line); border-radius:14px; padding:12px; background:#fffaf0; }
+.stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; }
+.stat { border:1px solid #ded3bc; border-radius:10px; padding:8px; background:#fff8e8; }
+.stat b { display:block; font-size:18px; } .stat span { display:block; font-size:12px; color:var(--soft); }
+pre { white-space:pre-wrap; overflow:auto; max-height:142px; background:#29251d; color:#fffaf0; border-radius:14px; padding:12px; font-size:12px; line-height:1.45; }
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite">
+  <h1>止 M3Dao Lock Garden</h1>
+  <p>Same twenty bowls. Clear gently, let tiles rise, and seek the quiet board with no possible moves.</p>
+  <nav class="toolbar" aria-label="Primary">
+    <button id="menuBtn" type="button">目 Menu</button>
+    <button id="levelsBtn" type="button">关 Levels</button>
+    <button id="continueBtn" type="button">续 Continue</button>
+    <label class="check"><input id="tileEnglish" type="checkbox" checked> 名 tile English</label>
+    <label class="check"><input id="tilePinyin" type="checkbox"> 拼 tile pīnyīn</label>
+  </nav>
+  <section id="menuView" class="view active">
+    <h2>始 A softer inversion</h2>
+    <p>Here, score is not a race upward through numbers. Score is the calm work of making the board unable to move.</p>
+    <div class="toolbar"><button id="startBtn" type="button">关 Choose a level</button><button id="playLinearBtn" type="button">行 Play linearly</button></div>
+    <div class="statbox"><h3>法 Design law</h3><p class="soft">No timer. No refill. Matches become emptiness. Remaining tiles cascade upward, slowly enough to be seen.</p></div>
+  </section>
+  <section id="levelsView" class="view">
+    <h2>关 Twenty preserved levels</h2>
+    <p>Each level keeps its original board, then is re-read through the new goal: make stillness, not extraction.</p>
+    <div id="levelGrid" class="level-grid"></div>
+  </section>
+  <section id="gameView" class="view">
+    <div class="play-grid">
+      <div>
+        <canvas id="game" width="700" height="700" aria-label="M3Dao Lock Garden board"></canvas>
+        <div id="status">选 Choose a tile, then tap or swipe to a neighbor.</div>
+        <div class="toolbar">
+          <button id="backLevelsBtn" type="button">关 Levels</button>
+          <button id="restartBtn" type="button">复 Restart</button>
+          <button id="prevBtn" type="button">前 Previous</button>
+          <button id="nextBtn" type="button">后 Next</button>
+        </div>
+      </div>
+      <aside class="side">
+        <div class="statbox"><h2 id="levelTitle">关 Level</h2><p id="studyText" class="soft"></p><div id="stats" class="stats"></div></div>
+        <div class="statbox"><h3>分 Lock score</h3><p id="scoreText" class="soft"></p></div>
+        <div class="statbox"><h3>码 Sasha string</h3><pre id="sashaString"></pre></div>
+      </aside>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  "use strict";
+  // 止: The old board remains; the desired ending changes.
+  const PACK = {"schema":"Match3Dao Sasha Clark level pack v1.0","created":"2026-06-02","project":"Match3Dao / M3Dao","designer":"Sasha Clark","generator":"match3dao_level_lab_final.py","constitution_summary":["7x7 grid","Five Phases only","adjacent swaps only","legal swap creates a visible match","matched tiles become persistent emptiness","no gravity","no replenishment","visible move counting","open information"],"levels":[
+  {"id":"m3dao_01","title":"Beginner 1: First Bowl","observed_tier":"Beginner","order":1,"board":[["土","木","金","金","火","土","土"],["火","火","木","木","火","金","火"],["木","金","水","土","土","木","木"],["金","水","火","木","金","火","火"],["水","土","土","水","土","土","金"],["水","火","水","土","水","金","金"],["金","水","木","土","木","土","火"]],"sasha_string":"土木金金火土土|火火木木火金火|木金水土土木木|金水火木金火火|水土土水土土金|水火水土水金金|金水木土木土火","metadata":{"start_moves":7,"mean_cleared":13.6875,"mean_turns":3.5625,"open_advantage":0.375,"greedy_traps":1,"design_role":"First seeing: learn that every legal move has a visible reason."},"docs":{"player_lesson":"First seeing: learn that every legal move has a visible reason.","designer_note":"Starts with 7 visible legal moves; mean cleared 13.69; open advantage 0.38; greedy traps 1."}},
+  {"id":"m3dao_02","title":"Beginner 2: Small Gate","observed_tier":"Beginner","order":2,"board":[["木","水","土","木","水","金","木"],["金","火","木","金","木","金","土"],["火","水","木","火","土","木","火"],["水","土","金","水","水","金","土"],["火","金","木","木","水","木","火"],["土","水","土","火","金","土","水"],["金","木","木","金","水","金","火"]],"sasha_string":"木水土木水金木|金火木金木金土|火水木火土木火|水土金水水金土|火金木木水木火|土水土火金土水|金木木金水金火","metadata":{"start_moves":6,"mean_cleared":13.5,"mean_turns":4.03125,"open_advantage":3,"greedy_traps":1,"design_role":"First seeing: learn that every legal move has a visible reason."},"docs":{"player_lesson":"First seeing: learn that every legal move has a visible reason.","designer_note":"Starts with 6 visible legal moves; mean cleared 13.50; open advantage 3.00; greedy traps 1."}},
+  {"id":"m3dao_03","title":"Beginner 3: Quiet Neighbor","observed_tier":"Beginner","order":3,"board":[["土","金","火","水","木","金","水"],["水","火","木","水","木","金","火"],["土","水","土","土","金","火","水"],["火","火","土","水","土","土","金"],["土","木","水","水","火","金","火"],["金","火","木","金","木","土","火"],["火","水","水","土","金","金","土"]],"sasha_string":"土金火水木金水|水火木水木金火|土水土土金火水|火火土水土土金|土木水水火金火|金火木金木土火|火水水土金金土","metadata":{"start_moves":7,"mean_cleared":14.25,"mean_turns":4.375,"open_advantage":2,"greedy_traps":1,"design_role":"First seeing: learn that every legal move has a visible reason."},"docs":{"player_lesson":"First seeing: learn that every legal move has a visible reason.","designer_note":"Starts with 7 visible legal moves; mean cleared 14.25; open advantage 2.00; greedy traps 1."}},
+  {"id":"m3dao_04","title":"Beginner 4: Visible Cause","observed_tier":"Beginner","order":4,"board":[["金","火","金","金","水","木","金"],["水","火","木","木","水","金","木"],["火","土","木","火","火","水","水"],["火","水","金","土","火","水","木"],["木","金","火","土","水","火","土"],["金","土","火","金","水","金","火"],["水","土","金","木","木","土","水"]],"sasha_string":"金火金金水木金|水火木木水金木|火土木火火水水|火水金土火水木|木金火土水火土|金土火金水金火|水土金木木土水","metadata":{"start_moves":8,"mean_cleared":13.53125,"mean_turns":4.1875,"open_advantage":4.25,"greedy_traps":1,"design_role":"First seeing: learn that every legal move has a visible reason."},"docs":{"player_lesson":"First seeing: learn that every legal move has a visible reason.","designer_note":"Starts with 8 visible legal moves; mean cleared 13.53; open advantage 4.25; greedy traps 1."}},
+  {"id":"m3dao_05","title":"Easy 1: Opening Water","observed_tier":"Easy","order":5,"board":[["土","水","金","水","火","水","火"],["火","木","木","土","火","火","木"],["金","土","火","土","水","木","土"],["木","金","火","金","水","土","火"],["水","水","土","水","土","水","水"],["水","土","金","水","火","水","土"],["土","金","木","金","水","木","木"]],"sasha_string":"土水金水火水火|火木木土火火木|金土火土水木土|木金火金水土火|水水土水土水水|水土金水火水土|土金木金水木木","metadata":{"start_moves":12,"mean_cleared":18.40625,"mean_turns":5.9375,"open_advantage":3.625,"greedy_traps":1,"design_role":"Gentle continuity: a small field of choices begins to breathe after clearing."},"docs":{"player_lesson":"Gentle continuity: a small field of choices begins to breathe after clearing.","designer_note":"Starts with 12 visible legal moves; mean cleared 18.41; open advantage 3.62; greedy traps 1."}},
+  {"id":"m3dao_06","title":"Easy 2: Gentle Field","observed_tier":"Easy","order":6,"board":[["土","土","金","金","木","木","金"],["水","水","木","火","金","水","火"],["金","土","木","水","土","土","金"],["金","木","金","金","木","火","土"],["木","火","土","水","金","土","金"],["火","火","金","火","水","火","火"],["木","土","木","水","土","金","金"]],"sasha_string":"土土金金木木金|水水木火金水火|金土木水土土金|金木金金木火土|木火土水金土金|火火金火水火火|木土木水土金金","metadata":{"start_moves":8,"mean_cleared":19.40625,"mean_turns":6.125,"open_advantage":4.5,"greedy_traps":1,"design_role":"Gentle continuity: a small field of choices begins to breathe after clearing."},"docs":{"player_lesson":"Gentle continuity: a small field of choices begins to breathe after clearing.","designer_note":"Starts with 8 visible legal moves; mean cleared 19.41; open advantage 4.50; greedy traps 1."}},
+  {"id":"m3dao_07","title":"Easy 3: Clear Breath","observed_tier":"Easy","order":7,"board":[["金","金","水","木","水","金","水"],["木","火","土","火","水","水","木"],["水","水","火","土","木","火","火"],["木","土","木","金","水","火","火"],["火","金","金","火","木","土","金"],["金","水","土","金","火","火","土"],["水","水","土","水","木","金","水"]],"sasha_string":"金金水木水金水|木火土火水水木|水水火土木火火|木土木金水火火|火金金火木土金|金水土金火火土|水水土水木金水","metadata":{"start_moves":10,"mean_cleared":19.6875,"mean_turns":6.28125,"open_advantage":3,"greedy_traps":1,"design_role":"Gentle continuity: a small field of choices begins to breathe after clearing."},"docs":{"player_lesson":"Gentle continuity: a small field of choices begins to breathe after clearing.","designer_note":"Starts with 10 visible legal moves; mean cleared 19.69; open advantage 3.00; greedy traps 1."}},
+  {"id":"m3dao_08","title":"Easy 4: Returning Space","observed_tier":"Easy","order":8,"board":[["水","土","土","火","火","木","金"],["土","金","火","火","木","水","金"],["金","火","金","金","土","水","火"],["火","水","金","木","水","木","木"],["火","木","水","木","金","金","水"],["土","水","土","水","火","木","火"],["水","金","木","水","金","土","木"]],"sasha_string":"水土土火火木金|土金火火木水金|金火金金土水火|火水金木水木木|火木水木金金水|土水土水火木火|水金木水金土木","metadata":{"start_moves":11,"mean_cleared":18.8125,"mean_turns":5.375,"open_advantage":2.875,"greedy_traps":1,"design_role":"Gentle continuity: a small field of choices begins to breathe after clearing."},"docs":{"player_lesson":"Gentle continuity: a small field of choices begins to breathe after clearing.","designer_note":"Starts with 11 visible legal moves; mean cleared 18.81; open advantage 2.88; greedy traps 1."}},
+  {"id":"m3dao_09","title":"Medium 1: Patient Garden","observed_tier":"Medium","order":9,"board":[["金","金","火","水","木","水","火"],["土","水","金","水","土","土","金"],["火","水","水","金","金","土","木"],["金","火","金","金","木","金","金"],["木","火","水","土","水","木","木"],["水","木","土","水","金","火","木"],["土","木","火","木","火","水","金"]],"sasha_string":"金金火水木水火|土水金水土土金|火水水金金土木|金火金金木金金|木火水土水木木|水木土水金火木|土木火木火水金","metadata":{"start_moves":16,"mean_cleared":22.53125,"mean_turns":7.03125,"open_advantage":9.375,"greedy_traps":3,"design_role":"The Lesson of Not Forcing: openness strongly outperforms extraction."},"docs":{"player_lesson":"The Lesson of Not Forcing: openness strongly outperforms extraction.","designer_note":"Starts with 16 visible legal moves; mean cleared 22.53; open advantage 9.38; greedy traps 3."}},
+  {"id":"m3dao_10","title":"Medium 2: The Useful Gap","observed_tier":"Medium","order":10,"board":[["木","土","金","火","水","木","木"],["水","火","金","土","火","金","水"],["金","木","木","火","木","水","火"],["金","火","金","金","土","木","水"],["土","水","水","木","木","土","金"],["木","水","木","木","金","土","水"],["金","木","金","土","金","火","土"]],"sasha_string":"木土金火水木木|水火金土火金水|金木木火木水火|金火金金土木水|土水水木木土金|木水木木金土水|金木金土金火土","metadata":{"start_moves":12,"mean_cleared":22.84375,"mean_turns":7.21875,"open_advantage":8,"greedy_traps":2,"design_role":"The Lesson of Not Forcing: openness strongly outperforms extraction."},"docs":{"player_lesson":"The Lesson of Not Forcing: openness strongly outperforms extraction.","designer_note":"Starts with 12 visible legal moves; mean cleared 22.84; open advantage 8.00; greedy traps 2."}},
+  {"id":"m3dao_11","title":"Medium 3: Measured Fire","observed_tier":"Medium","order":11,"board":[["土","金","土","水","金","金","木"],["金","金","木","金","土","土","火"],["金","水","土","火","火","土","火"],["火","火","金","木","金","金","水"],["水","水","火","金","金","水","火"],["金","金","火","水","土","水","木"],["木","金","木","水","木","土","土"]],"sasha_string":"土金土水金金木|金金木金土土火|金水土火火土火|火火金木金金水|水水火金金水火|金金火水土水木|木金木水木土土","metadata":{"start_moves":13,"mean_cleared":23.5625,"mean_turns":7.5,"open_advantage":7.875,"greedy_traps":2,"design_role":"Balanced ritual: enough possible futures to reward patient comparison."},"docs":{"player_lesson":"Balanced ritual: enough possible futures to reward patient comparison.","designer_note":"Starts with 13 visible legal moves; mean cleared 23.56; open advantage 7.88; greedy traps 2."}},
+  {"id":"m3dao_12","title":"Medium 4: Field of Relations","observed_tier":"Medium","order":12,"board":[["水","水","土","木","土","金","火"],["火","金","水","土","水","木","土"],["土","火","火","水","火","金","火"],["水","金","土","火","木","土","水"],["土","火","金","土","土","水","金"],["土","金","水","火","金","水","火"],["水","火","土","木","火","土","金"]],"sasha_string":"水水土木土金火|火金水土水木土|土火火水火金火|水金土火木土水|土火金土土水金|土金水火金水火|水火土木火土金","metadata":{"start_moves":11,"mean_cleared":22.46875,"mean_turns":7.375,"open_advantage":5.75,"greedy_traps":1,"design_role":"Balanced ritual: enough possible futures to reward patient comparison."},"docs":{"player_lesson":"Balanced ritual: enough possible futures to reward patient comparison.","designer_note":"Starts with 11 visible legal moves; mean cleared 22.47; open advantage 5.75; greedy traps 1."}},
+  {"id":"m3dao_13","title":"Hard 1: Temptation of Gold","observed_tier":"Hard","order":13,"board":[["土","土","火","木","土","水","金"],["土","金","金","土","水","金","水"],["金","土","金","水","木","火","金"],["火","木","土","木","水","木","木"],["水","水","金","木","火","水","土"],["火","水","火","金","木","水","火"],["水","火","土","金","金","火","木"]],"sasha_string":"土土火木土水金|土金金土水金水|金土金水木火金|火木土木水木木|水水金木火水土|火水火金木水火|水火土金金火木","metadata":{"start_moves":16,"mean_cleared":25.0,"mean_turns":8.03125,"open_advantage":11.0,"greedy_traps":2,"design_role":"The Lesson of Not Forcing: openness strongly outperforms extraction."},"docs":{"player_lesson":"The Lesson of Not Forcing: openness strongly outperforms extraction.","designer_note":"Starts with 16 visible legal moves; mean cleared 25.00; open advantage 11.00; greedy traps 2."}},
+  {"id":"m3dao_14","title":"Hard 2: Branches After Rain","observed_tier":"Hard","order":14,"board":[["木","土","水","水","火","火","木"],["木","土","金","土","火","金","木"],["土","水","水","木","木","水","火"],["水","金","火","水","火","金","木"],["木","木","火","水","金","水","火"],["水","金","金","木","金","木","火"],["水","木","土","金","土","木","土"]],"sasha_string":"木土水水火火木|木土金土火金木|土水水木木水火|水金火水火金木|木木火水金水火|水金金木金木火|水木土金土木土","metadata":{"start_moves":11,"mean_cleared":24.34375,"mean_turns":7.0625,"open_advantage":9.875,"greedy_traps":1,"design_role":"The Lesson of Not Forcing: openness strongly outperforms extraction."},"docs":{"player_lesson":"The Lesson of Not Forcing: openness strongly outperforms extraction.","designer_note":"Starts with 11 visible legal moves; mean cleared 24.34; open advantage 9.88; greedy traps 1."}},
+  {"id":"m3dao_15","title":"Hard 3: Stone and Stream","observed_tier":"Hard","order":15,"board":[["土","水","金","水","水","金","水"],["金","土","火","火","土","金","土"],["土","火","金","火","水","火","金"],["金","火","火","水","木","火","水"],["火","金","水","土","火","土","金"],["火","土","金","水","金","水","火"],["金","火","水","金","水","金","火"]],"sasha_string":"土水金水水金水|金土火火土金土|土火金火水火金|金火火水木火水|火金水土火土金|火土金水金水火|金火水金水金火","metadata":{"start_moves":21,"mean_cleared":27.09375,"mean_turns":8.625,"open_advantage":4.875,"greedy_traps":2,"design_role":"Temptation and restraint: visible greedy paths must be weighed against future space."},"docs":{"player_lesson":"Temptation and restraint: visible greedy paths must be weighed against future space.","designer_note":"Starts with 21 visible legal moves; mean cleared 27.09; open advantage 4.88; greedy traps 2."}},
+  {"id":"m3dao_16","title":"Hard 4: The Long Clearing","observed_tier":"Hard","order":16,"board":[["火","火","水","木","水","火","土"],["土","水","火","火","水","水","火"],["土","火","金","木","金","水","金"],["火","土","木","金","水","土","水"],["水","水","木","火","木","木","土"],["木","水","金","水","金","木","水"],["水","木","木","土","土","金","火"]],"sasha_string":"火火水木水火土|土水火火水水火|土火金木金水金|火土木金水土水|水水木火木木土|木水金水金木水|水木木土土金火","metadata":{"start_moves":18,"mean_cleared":23.90625,"mean_turns":7.84375,"open_advantage":8.5,"greedy_traps":1,"design_role":"The Lesson of Not Forcing: openness strongly outperforms extraction."},"docs":{"player_lesson":"The Lesson of Not Forcing: openness strongly outperforms extraction.","designer_note":"Starts with 18 visible legal moves; mean cleared 23.91; open advantage 8.50; greedy traps 1."}},
+  {"id":"m3dao_17","title":"Expert 1: Open Mountain","observed_tier":"Expert","order":17,"board":[["金","木","木","土","土","水","金"],["木","金","木","木","金","土","水"],["火","土","水","水","木","水","水"],["木","水","金","金","土","土","木"],["水","金","水","金","火","火","金"],["木","水","木","火","木","木","火"],["水","土","水","土","土","火","土"]],"sasha_string":"金木木土土水金|木金木木金土水|火土水水木水水|木水金金土土木|水金水金火火金|木水木火木木火|水土水土土火土","metadata":{"start_moves":26,"mean_cleared":29.5625,"mean_turns":9.46875,"open_advantage":7.625,"greedy_traps":1,"design_role":"Open-field contemplation: abundance, transformation, and long-form stillness."},"docs":{"player_lesson":"Open-field contemplation: abundance, transformation, and long-form stillness.","designer_note":"Starts with 26 visible legal moves; mean cleared 29.56; open advantage 7.62; greedy traps 1."}},
+  {"id":"m3dao_18","title":"Expert 2: Great Vessel","observed_tier":"Expert","order":18,"board":[["土","金","水","金","木","金","木"],["火","水","火","金","火","木","金"],["金","金","土","水","木","火","火"],["木","金","火","木","火","水","土"],["金","水","火","水","木","水","火"],["水","火","水","土","水","火","水"],["土","火","土","木","水","水","木"]],"sasha_string":"土金水金木金木|火水火金火木金|金金土水木火火|木金火木火水土|金水火水木水火|水火水土水火水|土火土木水水木","metadata":{"start_moves":23,"mean_cleared":24.03125,"mean_turns":7.71875,"open_advantage":7.5,"greedy_traps":2,"design_role":"Open-field contemplation: abundance, transformation, and long-form stillness."},"docs":{"player_lesson":"Open-field contemplation: abundance, transformation, and long-form stillness.","designer_note":"Starts with 23 visible legal moves; mean cleared 24.03; open advantage 7.50; greedy traps 2."}},
+  {"id":"m3dao_19","title":"Expert 3: Unforced Abundance","observed_tier":"Expert","order":19,"board":[["火","水","金","火","金","金","火"],["火","土","土","水","木","火","金"],["金","火","水","金","水","木","金"],["火","水","火","金","木","土","木"],["水","火","土","水","火","木","火"],["水","火","水","土","金","土","水"],["木","木","火","木","土","火","火"]],"sasha_string":"火水金火金金火|火土土水木火金|金火水金水木金|火水火金木土木|水火土水火木火|水火水土金土水|木木火木土火火","metadata":{"start_moves":18,"mean_cleared":27.40625,"mean_turns":8.59375,"open_advantage":5.625,"greedy_traps":3,"design_role":"Open-field contemplation: abundance, transformation, and long-form stillness."},"docs":{"player_lesson":"Open-field contemplation: abundance, transformation, and long-form stillness.","designer_note":"Starts with 18 visible legal moves; mean cleared 27.41; open advantage 5.62; greedy traps 3."}},
+  {"id":"m3dao_20","title":"Expert 4: Complete Stillness","observed_tier":"Expert","order":20,"board":[["金","火","木","木","水","火","水"],["火","土","火","金","木","金","水"],["土","木","土","水","金","水","木"],["火","木","火","木","火","火","金"],["金","火","金","木","水","金","土"],["金","土","火","火","木","金","木"],["木","金","火","火","土","水","金"]],"sasha_string":"金火木木水火水|火土火金木金水|土木土水金水木|火木火木火火金|金火金木水金土|金土火火木金木|木金火火土水金","metadata":{"start_moves":14,"mean_cleared":27.6875,"mean_turns":8.9375,"open_advantage":5.375,"greedy_traps":1,"design_role":"Open-field contemplation: abundance, transformation, and long-form stillness."},"docs":{"player_lesson":"Open-field contemplation: abundance, transformation, and long-form stillness.","designer_note":"Starts with 14 visible legal moves; mean cleared 27.69; open advantage 5.38; greedy traps 1."}}
+]};
+  const N=7, EMPTY=".";
+  const PHASE=Object.freeze({
+    "木":{en:"Wood",py:"mù",color:"#7da86b"},"火":{en:"Fire",py:"huǒ",color:"#c96b56"},
+    "土":{en:"Earth",py:"tǔ",color:"#b9925e"},"金":{en:"Metal",py:"jīn",color:"#c8b15a"},"水":{en:"Water",py:"shuǐ",color:"#5f94b8"}
+  });
+  const NOTES=[
+    "A first lock is learned by noticing which obvious clear leaves fewer futures, not more points.",
+    "The small gate asks you to spend matches only when they close branches behind them.",
+    "A neighbor is useful when it makes the board simpler after the upward breath.",
+    "Cause remains visible: every swap must earn its place by moving the board toward stillness.",
+    "Water opens space, but the new question is whether that space becomes quiet.",
+    "A gentle field rewards restraint after the cascade, not frantic continuation.",
+    "Clear breath means allowing motion to finish before judging the next move.",
+    "Returning space is not emptiness alone; it is emptiness arranged against future swaps.",
+    "The patient garden teaches that the strongest move may be the one that reduces choice.",
+    "The useful gap is a designed silence: a column rises, and the board forgets a possibility.",
+    "Measured fire should be used to seal, not to consume everything available.",
+    "Relations matter after the rise. A clear is successful when new neighbors fail to tempt.",
+    "Gold tempts extraction; the lock path asks whether value can become closure.",
+    "Branches after rain are beautiful, but this variant asks which branch can end branching.",
+    "Stone and stream balance: let the column rise, then count the remaining freedoms.",
+    "The long clearing is not a sprint. It is a slow narrowing of possible swaps.",
+    "Open mountain begins abundant, so the art is to make abundance settle into form.",
+    "The great vessel holds many futures; lock play pours them out carefully.",
+    "Unforced abundance is mastered when you stop feeding the board new chances.",
+    "Complete stillness is the ideal: a board that has moved enough to need no more movement."
+  ];
+  const $=id=>document.getElementById(id), canvas=$("game"), ctx=canvas.getContext("2d");
+  let cssSize=700,dpr=1,pad=36,span=628,cell=span/N;
+  const state={view:"menu",levelIndex:0,board:[],selected:null,busy:false,cleared:0,swaps:0,showEn:true,showPy:false,linear:true,gesture:null,rising:[]};
+  const clone=b=>b.map(r=>r.slice()), k=p=>p.r+","+p.c, same=(a,b)=>a&&b&&a.r===b.r&&a.c===b.c;
+  const adjacent=(a,b)=>Math.abs(a.r-b.r)+Math.abs(a.c-b.c)===1;
+  const inside=p=>p&&p.r>=0&&p.r<N&&p.c>=0&&p.c<N;
+  function swapped(board,a,b){ const n=clone(board), t=n[a.r][a.c]; n[a.r][a.c]=n[b.r][b.c]; n[b.r][b.c]=t; return n; }
+  function runs(board){
+    const found=new Set();
+    for(let r=0;r<N;r++){ let c=0; while(c<N){ const v=board[r][c]; let e=c+1; while(v!==EMPTY&&e<N&&board[r][e]===v)e++; if(v!==EMPTY&&e-c>=3)for(let x=c;x<e;x++)found.add(k({r,c:x})); c=e; } }
+    for(let c=0;c<N;c++){ let r=0; while(r<N){ const v=board[r][c]; let e=r+1; while(v!==EMPTY&&e<N&&board[e][c]===v)e++; if(v!==EMPTY&&e-r>=3)for(let y=r;y<e;y++)found.add(k({r:y,c})); r=e; } }
+    return found;
+  }
+  function legal(board,a,b){ return inside(a)&&inside(b)&&adjacent(a,b)&&board[a.r][a.c]!==EMPTY&&board[b.r][b.c]!==EMPTY&&runs(swapped(board,a,b)).size>0; }
+  function moves(board){ const out=[]; for(let r=0;r<N;r++)for(let c=0;c<N;c++)for(const d of [[1,0],[0,1]]){ const b={r:r+d[0],c:c+d[1]}; if(legal(board,{r,c},b))out.push([{r,c},b]); } return out; }
+  
+  // Constitution check: We reject the traditional accumulation of points. 
+  // "Lock Score" recontextualizes the metric to reward reaching the state of stillness[cite: 52, 205].
+  function lockScore(){
+    const open=moves(state.board).length, empty=state.board.flat().filter(v=>v===EMPTY).length;
+    const lock=open===0?500:0, calm=Math.max(0,140-open*7), spare=empty*5, thrift=Math.max(0,80-state.swaps*4);
+    return {open,empty,total:lock+calm+spare+thrift,locked:open===0};
+  }
+  function resizeCanvas(){
+    const box=canvas.getBoundingClientRect(); cssSize=Math.max(280,Math.round(box.width||canvas.clientWidth||620));
+    dpr=Math.min(window.devicePixelRatio||1,3); canvas.width=Math.round(cssSize*dpr); canvas.height=Math.round(cssSize*dpr); ctx.setTransform(dpr,0,0,dpr,0,0);
+    pad=Math.max(18,Math.round(cssSize*.052)); span=cssSize-pad*2; cell=span/N; draw();
+  }
+  function pt(e){ const src=e.touches&&e.touches[0]?e.touches[0]:(e.changedTouches&&e.changedTouches[0]?e.changedTouches[0]:e); return {x:src.clientX,y:src.clientY,id:src.pointerId??0}; }
+  function cellAtXY(x,y){ const box=canvas.getBoundingClientRect(), cx=(x-box.left)*cssSize/box.width-pad, cy=(y-box.top)*cssSize/box.height-pad; const c=Math.floor(cx/cell), r=Math.floor(cy/cell); return r>=0&&r<N&&c>=0&&c<N?{r,c}:null; }
+  function prevent(e){ if(e.cancelable)e.preventDefault(); }
+  function down(e){ 
+    prevent(e); if(state.busy)return; const p=pt(e), cell=cellAtXY(p.x,p.y); state.gesture={id:p.id,start:p,latest:p,cell,moved:false}; 
+    // Fix: using catch(e) instead of catch(_) to prevent fatal syntax errors in older iOS Safari versions.
+    if(e.pointerId!==undefined&&canvas.setPointerCapture)try{canvas.setPointerCapture(e.pointerId);}catch(e){} 
+  }
+  function move(e){ if(!state.gesture)return; prevent(e); const p=pt(e); state.gesture.latest=p; if(Math.hypot(p.x-state.gesture.start.x,p.y-state.gesture.start.y)>12)state.gesture.moved=true; }
+  function up(e){
+    if(!state.gesture)return; prevent(e); const g=state.gesture, p=pt(e), from=g.cell; state.gesture=null; if(!from)return;
+    const dx=p.x-g.start.x, dy=p.y-g.start.y, dist=Math.hypot(dx,dy);
+    if(dist>Math.max(22,cell*.23)){ const dir=Math.abs(dx)>Math.abs(dy)?{r:0,c:dx>0?1:-1}:{r:dy>0?1:-1,c:0}; choose(from,{r:from.r+dir.r,c:from.c+dir.c}); }
+    else choose(from,null);
+  }
+  function choose(p,swipeTo){
+    if(state.busy||!inside(p)||state.board[p.r][p.c]===EMPTY)return;
+    if(swipeTo){ attempt(p,swipeTo); return; }
+    if(!state.selected){ state.selected=p; $("status").textContent="候 Tile selected. Tap a neighbor, or swipe from a tile."; draw(); return; }
+    if(same(state.selected,p)){ state.selected=null; $("status").textContent="释 Selection released."; draw(); return; }
+    if(!adjacent(state.selected,p)){ state.selected=p; $("status").textContent="候 New tile selected."; draw(); return; }
+    attempt(state.selected,p);
+  }
+  function attempt(a,b){
+    if(!inside(a)||!inside(b)||!legal(state.board,a,b)){ state.selected=null; $("status").textContent="静 That swap does not make a visible match."; draw(); return; }
+    state.board=swapped(state.board,a,b); state.selected=null; state.busy=true; state.swaps++; $("status").textContent="观 Swap made. The board will clear, then rise."; draw(); setTimeout(settle,180);
+  }
+  function settle(){
+    const hit=runs(state.board); if(hit.size){ for(const s of hit){ const [r,c]=s.split(",").map(Number); state.board[r][c]=EMPTY; } state.cleared+=hit.size; $("status").textContent=`空 ${hit.size} tiles become emptiness.`; draw(hit); setTimeout(()=>rise(true),260); return; }
+    finishTurn();
+  }
+  function rise(thenSettle){
+    const next=Array.from({length:N},()=>Array(N).fill(EMPTY)), anim=[];
+    for(let c=0;c<N;c++){ let wr=0; for(let r=0;r<N;r++){ const v=state.board[r][c]; if(v!==EMPTY){ next[wr][c]=v; if(wr!==r)anim.push({v,c,from:r,to:wr,t:0}); wr++; } }
+    }
+    state.board=next; state.rising=anim; if(!anim.length){ state.rising=[]; if(thenSettle)setTimeout(settle,120); else finishTurn(); return; }
+    let start=0; const dur=360;
+    function frame(ts){ if(!start)start=ts; const q=Math.min(1,(ts-start)/dur); state.rising.forEach(a=>a.t=q); draw(); if(q<1)requestAnimationFrame(frame); else { state.rising=[]; draw(); if(thenSettle)setTimeout(settle,160); else finishTurn(); } }
+    requestAnimationFrame(frame);
+  }
+  function finishTurn(){ state.busy=false; state.selected=null; const sc=lockScore(); $("status").textContent=sc.locked?"止 Locked. No fair moves remain.":`静 ${sc.open} fair moves remain. Close the garden softly.`; updateStats(); draw(); }
+  function tileBox(r,c){ return {x:pad+c*cell+7,y:pad+r*cell+7,w:cell-14}; }
+  function rounded(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function drawTileAt(v,x,y,w,active,fade){
+    ctx.lineWidth=active?5:2; ctx.strokeStyle=active?"#2b2419":"#ffffffaa"; ctx.fillStyle=v===EMPTY?"#eee5d2":PHASE[v].color; rounded(x,y,w,w,15); ctx.fill(); ctx.stroke();
+    if(fade){ ctx.fillStyle="rgba(255,250,240,.68)"; rounded(x,y,w,w,15); ctx.fill(); } if(v===EMPTY)return;
+    ctx.fillStyle="#fffaf0"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font=`${Math.floor(cell*.42)}px Georgia,"Noto Serif SC",serif`; ctx.fillText(v,x+w/2,y+w/2-6);
+    const label=state.showPy?PHASE[v].py:(state.showEn?PHASE[v].en:""); if(label){ ctx.font=`${Math.floor(cell*.13)}px Georgia,"Noto Serif SC",serif`; ctx.fillText(label,x+w/2,y+w*.77); }
+  }
+  function draw(fading=new Set()){
+    ctx.clearRect(0,0,cssSize,cssSize); ctx.fillStyle="#fffaf0"; ctx.fillRect(0,0,cssSize,cssSize);
+    const movingTargets=new Set(state.rising.map(a=>k({r:a.to,c:a.c})));
+    for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+      const b=tileBox(r,c), value=movingTargets.has(k({r,c}))?EMPTY:state.board[r][c];
+      drawTileAt(value,b.x,b.y,b.w,state.selected&&state.selected.r===r&&state.selected.c===c,fading.has(k({r,c})));
+    }
+    // 升: animated tiles rise after the settled board is known, making motion legible without changing rules.
+    for(const a of state.rising){ const from=tileBox(a.from,a.c), to=tileBox(a.to,a.c); const y=from.y+(to.y-from.y)*(1-Math.pow(1-a.t,3)); drawTileAt(a.v,to.x,y,to.w,false,false); }
+    ctx.strokeStyle="#d8ccb5"; ctx.lineWidth=1; for(let i=0;i<=N;i++){ ctx.beginPath(); ctx.moveTo(pad+i*cell,pad); ctx.lineTo(pad+i*cell,pad+span); ctx.moveTo(pad,pad+i*cell); ctx.lineTo(pad+span,pad+i*cell); ctx.stroke(); }
+  }
+  function show(view){ state.view=view; ["menuView","levelsView","gameView"].forEach(id=>$(id).classList.remove("active")); $(`${view}View`).classList.add("active"); if(view==="levels")renderLevels(); if(view==="game"){ updatePanel(); updateStats(); resizeCanvas(); } }
+  function loadLevel(i,linear=state.linear){ state.levelIndex=Math.max(0,Math.min(PACK.levels.length-1,i)); const level=PACK.levels[state.levelIndex]; state.board=clone(level.board); state.selected=null; state.busy=false; state.cleared=0; state.swaps=0; state.linear=linear; state.rising=[]; $("status").textContent="选 Choose a tile, then tap or swipe to a neighbor."; show("game"); }
+  function renderLevels(){
+    const grid=$("levelGrid"); grid.textContent=""; PACK.levels.forEach((level,i)=>{ const card=document.createElement("button"); card.type="button"; card.className="level-card"; card.setAttribute("aria-current",i===state.levelIndex); card.onclick=()=>loadLevel(i,false);
+      const h=document.createElement("h3"); h.textContent=`关 ${String(i+1).padStart(2,"0")} · ${level.observed_tier}`;
+      const note=document.createElement("div"); note.className="meta"; note.textContent=NOTES[i];
+      const data=document.createElement("div"); data.className="meta"; data.textContent=`Original fair moves: ${level.metadata.start_moves} · reverse-lock study level`;
+      card.append(h,note,data); grid.appendChild(card); });
+  }
+  function updatePanel(){ const level=PACK.levels[state.levelIndex]; $("levelTitle").textContent=`关 ${String(state.levelIndex+1).padStart(2,"0")} · ${level.title}`; $("studyText").textContent=NOTES[state.levelIndex]; $("sashaString").textContent=level.sasha_string; }
+  function updateStats(){ const sc=lockScore(), level=PACK.levels[state.levelIndex], stats=[["Score",sc.total],["Fair moves",sc.open],["Empty",sc.empty],["Swaps",state.swaps],["Cleared",state.cleared],["Tier",level.observed_tier]]; const box=$("stats"); box.textContent=""; for(const [label,val] of stats){ const item=document.createElement("div"), b=document.createElement("b"), s=document.createElement("span"); item.className="stat"; b.textContent=val; s.textContent=label; item.append(b,s); box.appendChild(item); } $("scoreText").textContent=sc.locked?`A locked board earns the stillness bonus. Current score: ${sc.total}.`:`Score grows as fair moves shrink. Lock bonus waits at zero moves. Current score: ${sc.total}.`; }
+  function cancelGesture(e){ prevent(e||{}); state.gesture=null; }
+  function bind(){
+    const passive={passive:false};
+    if(window.PointerEvent){ canvas.addEventListener("contextmenu",prevent,passive); canvas.addEventListener("pointerdown",down,passive); canvas.addEventListener("pointermove",move,passive); canvas.addEventListener("pointerup",up,passive); canvas.addEventListener("pointercancel",cancelGesture,passive); canvas.addEventListener("lostpointercapture",cancelGesture,passive); }
+    else { canvas.addEventListener("touchstart",down,passive); canvas.addEventListener("touchmove",move,passive); canvas.addEventListener("touchend",up,passive); canvas.addEventListener("touchcancel",cancelGesture,passive); canvas.addEventListener("mousedown",down); window.addEventListener("mousemove",move); window.addEventListener("mouseup",up); }
+    window.addEventListener("resize",resizeCanvas); window.addEventListener("orientationchange",()=>setTimeout(resizeCanvas,80)); if(window.visualViewport)visualViewport.addEventListener("resize",resizeCanvas);
+    $("menuBtn").onclick=()=>show("menu"); $("levelsBtn").onclick=()=>show("levels"); $("startBtn").onclick=()=>show("levels"); $("continueBtn").onclick=()=>loadLevel(state.levelIndex,state.linear); $("playLinearBtn").onclick=()=>loadLevel(0,true);
+    $("backLevelsBtn").onclick=()=>show("levels"); $("restartBtn").onclick=()=>loadLevel(state.levelIndex,state.linear); $("prevBtn").onclick=()=>loadLevel(state.levelIndex-1,state.linear); $("nextBtn").onclick=()=>loadLevel(state.levelIndex+1,state.linear);
+    $("tileEnglish").onchange=e=>{ state.showEn=e.target.checked; if(state.showEn)$("tilePinyin").checked=state.showPy=false; draw(); };
+    $("tilePinyin").onchange=e=>{ state.showPy=e.target.checked; if(state.showPy)$("tileEnglish").checked=state.showEn=false; draw(); };
+  }
+  bind(); state.board=clone(PACK.levels[0].board); updatePanel(); updateStats(); renderLevels(); resizeCanvas();
+})();
+</script>
+</body>
+</html>
